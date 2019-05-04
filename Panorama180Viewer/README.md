@@ -8,7 +8,7 @@ fish Eye動画のShaderを使ったリアルタイム反映など。
 three.jsのShaderを使用して、    
 静止画または動画がEquirectangular180またはFish Eye180のどちらでもVRで見ることができるようにしています。
 
-## 動画のwemb変換について
+## 動画のwebm変換について
 
 動画ファイルは、オリジナルのMirage Cameraで撮影した3840 x 2160ピクセルのmp4(H.264)です。    
 これを、ffmpegでwebm(VP9)に変換しました。    
@@ -54,6 +54,9 @@ projectionmode＝１でEquirectangularのSide By Side、projectionmode＝2でFis
 
 WebVR前の画面にて、左上に動画のサムネイルを表示してます。    
 PC版のFirefoxでは、このwebmでのサムネイルのアスペクト比が正しくないようです。     
+Oculus GoのFirefox Realityの場合は、左上のサムネイルが表示されないようです。    
+また、Oculus GoのOculus Browser(標準ブラウザ)、Firefox Realityだと再生が重い感じです。    
+後で調査予定。     
 
 以下は、実行デモです。    
 
