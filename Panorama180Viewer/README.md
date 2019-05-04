@@ -69,4 +69,36 @@ URLの引数として、以下のように指定できます。
 imageで参照する動画ファイル、intensityで明るさ、    
 projectionmode＝１でequirectangularのSide By Side、projectionmode＝2でFish EyeのSide By Sideです。    
 
+## Oculus Goでの検証用
+
+Oculus Goのブラウザでは、動画の再生が重い。    
+いくつかチェック用。
+
+### [ 投影変換のShaderをEquirectangular180にする ]
+
+動画自身はFish Eyeであるが、これを計算負荷のほとんどないEquirectangular180にする。    
+
+https://ft-lab.jp/WebGL/WebGLTest/Panorama180Viewer/show_webvr180_sbs_video.html?projectionmode=1
+
+Oculus Browserでは、動画が5fpsくらいになってるのは変わらず。    
+Firefox Realityではスムーズに安定した。    
+
+### [ Equirectangular180 + 品質下げる（-crf 50） ]
+
+ffmpegで変換する際に「-crf 50」を指定し手品質を下げたwebmを用意。    
+
+https://ft-lab.jp/WebGL/WebGLTest/Panorama180Viewer/show_webvr180_sbs_video.html?projectionmode=1&image=videos/ueno_park_crf50.webm
+
+Oculus Browserでは、動画が5fpsくらいになってるのは変わらず。    
+Firefox Realitではprojectionmode=1の指定をはずすと安定しないので、Shaderが負荷高いのかもしれない。    
+
+### [ Equirectangular180 + 品質下げる（-crf 60） ]
+
+ffmpegで変換する際に「-crf 60」を指定し手品質を下げたwebmを用意。    
+
+https://ft-lab.jp/WebGL/WebGLTest/Panorama180Viewer/show_webvr180_sbs_video.html?projectionmode=1&image=videos/ueno_park_crf60.webm
+
+Oculus Browserでは、動画が5fpsくらいになってるのは変わらず。    
+Firefox Realitではprojectionmode=1の指定をはずすと安定しないので、Shaderが負荷高いのかもしれない。    
+
 ----
