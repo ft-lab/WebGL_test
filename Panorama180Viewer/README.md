@@ -11,7 +11,7 @@ three.jsのShaderを使用して、
 ## 動画のwebm変換について
 
 動画ファイルは、オリジナルのMirage Cameraで撮影した3840 x 2160ピクセルのmp4(H.264)です。    
-これを、ffmpegでwebm(VP9)に変換しました。    
+これを、ffmpeg ( https://ffmpeg.org/ ) でwebm(VP9)に変換しました。    
 
 変換は以下のようにコマンドラインで行いました。    
 
@@ -85,7 +85,7 @@ Firefox Realityではスムーズに安定した。
 
 ### [ Equirectangular180 + 品質下げる（-crf 50） ]
 
-ffmpegで変換する際に「-crf 50」を指定し手品質を下げたwebmを用意。    
+ffmpegで変換する際に「-crf 50」を指定し品質を下げたwebmを用意。    
 
 https://ft-lab.jp/WebGL/WebGLTest/Panorama180Viewer/show_webvr180_sbs_video.html?projectionmode=1&image=videos/ueno_park_crf50.webm
 
@@ -94,7 +94,7 @@ Firefox Realityではprojectionmode=1の指定をはずすと安定しないの�
 
 ### [ Equirectangular180 + 品質下げる（-crf 60） ]
 
-ffmpegで変換する際に「-crf 60」を指定し手品質を下げたwebmを用意。    
+ffmpegで変換する際に「-crf 60」を指定し品質を下げたwebmを用意。    
 
 https://ft-lab.jp/WebGL/WebGLTest/Panorama180Viewer/show_webvr180_sbs_video.html?projectionmode=1&image=videos/ueno_park_crf60.webm
 
