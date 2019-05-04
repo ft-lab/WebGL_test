@@ -101,4 +101,22 @@ https://ft-lab.jp/WebGL/WebGLTest/Panorama180Viewer/show_webvr180_sbs_video.html
 Oculus Browserでは、動画が5fpsくらいになってるのは変わらず。    
 Firefox Realityではprojectionmode=1の指定をはずすと安定しないので、Shaderが負荷高いのかもしれない。    
 
+### [ 解像度を下げる ]
+
+1920 x 1080 ピクセルの解像度にした。    
+
+以下、「-crf 40」の指定。    
+「-vf "scale=1920:1080"」を指定して、解像度を半分にした。    
+
+https://ft-lab.jp/WebGL/WebGLTest/Panorama180Viewer/show_webvr180_sbs_video.html?image=videos/ueno_park_crf40_half.webm
+
+以下、「-crf 50」の指定。    
+「-vf "scale=1920:1080"」を指定して、解像度を半分にした。    
+
+https://ft-lab.jp/WebGL/WebGLTest/Panorama180Viewer/show_webvr180_sbs_video.html?image=videos/ueno_park_crf50_half.webm
+
+
+Oculus Browserでは、動画が5fpsくらいになってるのは変わらず。    
+Firefox RealityではFish Eyeの計算があっても安定。単純に解像度が1/4になったからかもしれない。    
+
 ----
