@@ -90,7 +90,7 @@ ffmpegで変換する際に「-crf 50」を指定し手品質を下げたwebmを
 https://ft-lab.jp/WebGL/WebGLTest/Panorama180Viewer/show_webvr180_sbs_video.html?projectionmode=1&image=videos/ueno_park_crf50.webm
 
 Oculus Browserでは、動画が5fpsくらいになってるのは変わらず。    
-Firefox Realitではprojectionmode=1の指定をはずすと安定しないので、Shaderが負荷高いのかもしれない。    
+Firefox Realityではprojectionmode=1の指定をはずすと安定しないので、Shaderが負荷高いのかもしれない。    
 
 ### [ Equirectangular180 + 品質下げる（-crf 60） ]
 
@@ -99,6 +99,6 @@ ffmpegで変換する際に「-crf 60」を指定し手品質を下げたwebmを
 https://ft-lab.jp/WebGL/WebGLTest/Panorama180Viewer/show_webvr180_sbs_video.html?projectionmode=1&image=videos/ueno_park_crf60.webm
 
 Oculus Browserでは、動画が5fpsくらいになってるのは変わらず。    
-Firefox Realitではprojectionmode=1の指定をはずすと安定しないので、Shaderが負荷高いのかもしれない。    
+Firefox Realityではprojectionmode=1の指定をはずすと安定しないので、Shaderが負荷高いのかもしれない。    
 
 ----
