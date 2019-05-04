@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Panorama180-3D VR View</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #f0f0f0;
+				margin: 0px;
+				overflow: hidden;
+			}
+			#thumb {
+				position: absolute;
+				top: 8px;
+				left: 8px;
+				width: 300px;
+				height: 150px;
+				color: #ffffff;
+				background-color: #1010a0;
+				margin: 0px;
+				padding: 0px;
+			}
+
+			a {
+				color: #ff0
+			}
+		</style>
+	</head>
+	<body>
+		<div id="thumb"></div>
+		<div id="container"></div>
+
+		<script src="../threejs/build/three.min.js"></script>
+		<script src="../threejs/vr/WebVR.js"></script>
+		<script src="../threejs/loaders/GLTFLoader.js"></script>		
+
+        <!-- --------------------------------- -->
+		<!-- panoramaSphereRendering Shader    -->
+        <!-- --------------------------------- -->
+		<script id="vs-panoramaSphereRendering" type="x-shader/x-vertex">
+			varying vec2 vUv;
+
+			void main()	{
+				vUv = uv;
+				gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+			}
+		</script>
+
+        <script id="fs-panoramaSphereRendering" type="x-shader/x-fragment">
+			varying vec2 vUv;
+
+			uniform sampler2D _MainTex;       // Texture.
+            uniform float _Intensity;         // Intensity.
+            uniform int _Mode;			      // 1 : Equirectangular180 SideBySide、2 : FishEye180 SideBySide.
+
+            const float PI = 3.1415926535;
+            const float PI2 = PI * 2.0;
+
+			float atan2(float y, float x) {
+				return (x == 0.0) ? sign(y) * PI / 2.0 : atan(y, x);
+			}
+
+			/**
+			 * Calculate UV Position on Texture.
+             */
+ 			vec2 calcUV (vec2 _uv, int leftEye) {
+                vec2 uv = _uv;
+
+				if (_Mode == 2) {
+					// FishEye to equirectangular conversion.
+					// reference : http://paulbourke.net/dome/fish2/
+					float theta = PI2 * (uv.x - 0.25);
+					float phi   = PI * (uv.y - 0.5);
+					float sinP = sin(phi);
+					float cosP = cos(phi);
+					float sinT = sin(theta);
+					float cosT = cos(theta);
+					vec3 vDir = vec3(cosP * sinT, cosP * cosT, sinP);
+
+					theta = atan2(vDir.z, vDir.x);
+					phi   = atan2(sqrt(vDir.x * vDir.x + vDir.z * vDir.z), vDir.y);
+					float r = phi / PI; 
+
+					uv.x = 0.5 + r * cos(theta);
+					uv.y = 0.5 + r * sin(theta);
+					uv.x *= 0.5;
+
+					if (leftEye == 0) {
+						uv.x += 0.5;
+                    }
+
+				} else if (_Mode == 1) {			// Equirectangular180 SideBySide.
+					if (leftEye == 0) {
+						uv.x += 0.5;
+					}
+				}
+				return uv;
+			}
+
+            void main()	{
+                vec2 uv = vUv;
+
+                // Right eye if uv.x is greater than 0.5.
+                int leftEye = 1;
+                if (uv.x >= 0.5) {
+                    leftEye = 0;
+                    uv.x -= 0.5;
+				}
+
+                vec4 col = vec4(0.5, 0.0, 0.0, 1.0);
+
+                // Calculate UV value.
+                uv = calcUV(uv, leftEye);
+    
+                col = texture2D( _MainTex, uv );
+                col.xyz  *= _Intensity;
+
+                gl_FragColor = vec4( col.xyz, 1.0 );
+			}
+		</script>
+
+		<!-- --------------------------------- -->
+		<!-- main                              -->
+        <!-- --------------------------------- -->
+		<script>
+			var camera, scene, renderer;
+			var texture;
+			var m_sphere;
+			var m_movieURL = "videos/ueno_park_20190224.webm";		// Background video URL.
+			var m_glTFURL = "objects/halfSphere_vr180.glb";
+			var m_glTFObject = null;
+
+			var m_projectionMode = 2;   // Projection Mode (1 : Equirectangular180 SideBySide、2 : FishEye180 SideBySide).
+			var m_intensity = 1.0;		// Background Intensity.
+			var m_uniforms;				// Shader parameters.
+
+			init();
+			animate();
+
+			/**
+			 * Get parameters from URL argument.
+			 */
+			 function parseURL (urlStr) {
+				m_projectionMode = 2;
+				m_intensity = 1.0;
+
+				urlStr = urlStr.toLowerCase();
+				var strA = urlStr.split('&');
+				for (var i = 0; i < strA.length; ++i) {
+					var str2 = strA[i].split('=');
+					if (str2.length == 2) {
+						if (str2[1] == '') continue;
+						if (str2[0] == 'image') {
+							m_movieURL = str2[1];
+
+						} else if (str2[0] == 'intensity') {
+							m_intensity = parseFloat(str2[1]);
+
+						} else if (str2[0] == 'projectionmode') {
+							m_projectionMode = parseInt(str2[1]);
+							if (m_projectionMode != 2) m_projectionMode = 1;
+						}
+					}
+				}
+			}
+
+			function init() {
+				var container = document.getElementById( 'container' );
+
+				// Get parameters from URL argument (Example : image=video/xxxx.mp4&intensity=1.2).
+				var url = location.search.substring(1);
+				parseURL(url);
+
+				// Camera is fixed at (0, 0, 0) in VR.
+				camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 2000 );
+				camera.layers.enable( 1 ); // render left view when no stereo available
+
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color(0x000000);
+
+				// Load hemispheric glTF shape.
+				loadGLTF(m_glTFURL);
+
+				renderer = new THREE.WebGLRenderer({ antialias: true });
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.vr.enabled = true;
+				container.appendChild( renderer.domElement );
+
+				document.body.appendChild( WEBVR.createButton( renderer, { frameOfReferenceType: 'head-model' } ) );
+				window.addEventListener( 'resize', onWindowResize, false );
+			}
+
+			function onWindowResize() {
+				var width  = window.innerWidth;
+				var height = window.innerHeight;
+
+				camera.aspect = width / height;
+				camera.updateProjectionMatrix();
+				renderer.setSize( width, height );
+			}
+
+			function animate() {
+				renderer.setAnimationLoop( render );
+			}
+
+			function render() {
+				renderer.render( scene, camera );
+			}
+
+			/**
+			 * Load glTF file.
+			 */
+			function loadGLTF (url) {
+				var loader = new THREE.GLTFLoader();
+				loader.load(url, function ( gltf ) {
+					m_glTFObject = gltf.scene;
+					setupBackgroundSphere();
+				} );
+			}
+
+			/**
+			 * Add a background hemisphere to the scene.
+			 */
+			function setupBackgroundSphere () {
+				// Loading panoramic video.
+				var video = document.createElement( 'video' );
+				video.crossOrigin = 'anonymous';
+				video.loop = true;
+				video.muted = true;
+				video.src = m_movieURL;
+				video.setAttribute( 'webkit-playsinline', 'webkit-playsinline' );
+				video.play();
+
+				// Place a thumbnail.
+				var thumb = document.getElementById( 'thumb' );
+				video.width = 300;
+				video.height = 150;
+				thumb.appendChild(video);
+
+				texture = new THREE.VideoTexture(video);
+				texture.minFilter = THREE.LinearFilter;
+				texture.maxFilter = THREE.LinearFilter;
+				texture.format = THREE.RGBFormat;
+
+				var scale = 100.0;		// Background radius.
+
+				// Create material from background sphere shader.
+				m_uniforms = {
+                    "_MainTex": {value: texture},			// Panorama180 image.
+                    "_Intensity": {value: m_intensity},     // Intensity.
+                    "_Mode": {value: m_projectionMode}		// 1 : Equirectangular180 SideBySide、2 : FishEye180 SideBySide.
+				};
+
+				var material = new THREE.ShaderMaterial( {
+                    uniforms: m_uniforms,
+                    vertexShader: document.getElementById( 'vs-panoramaSphereRendering' ).textContent,
+                    fragmentShader: document.getElementById( 'fs-panoramaSphereRendering' ).textContent
+                    } );
+
+				// Left.
+				{
+					// Copy the geometry of the node where Material exists from the glTF hierarchy.
+					var geom = null;
+					m_glTFObject.traverse( function( node ) {
+						if (node.material) {
+							geom = node.geometry.clone();
+						}
+					} );
+
+					var mesh = new THREE.Mesh( geom, material );
+
+					mesh.scale.set(scale, scale * -1.0, scale);
+					mesh.material.needsUpdate = true;
+
+					mesh.layers.set( 1 ); // display in left eye only
+					scene.add( mesh );
+				}
+
+				// Right.
+				{
+					// Copy the geometry of the node where Material exists from the glTF hierarchy.
+					var geom = null;
+					m_glTFObject.traverse( function( node ) {
+						if (node.material) {
+							geom = node.geometry.clone();
+						}
+					} );
+
+					var mesh = new THREE.Mesh( geom, material );
+
+					mesh.scale.set(scale, scale * -1.0, scale);
+					mesh.material.needsUpdate = true;
+
+					var uvs = mesh.geometry.attributes.uv.array;
+					for (var i = 0; i < uvs.length; i += 2) {
+						uvs[i] += 0.5;
+					}
+
+					mesh.layers.set( 2 ); // display in right eye only
+					scene.add( mesh );
+				}
+			}
+			
+		</script>
+	</body>
+</html>
