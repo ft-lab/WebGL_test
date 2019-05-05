@@ -11,17 +11,6 @@
 				margin: 0px;
 				overflow: hidden;
 			}
-			#thumb {
-				position: absolute;
-				top: 8px;
-				left: 8px;
-				width: 300px;
-				height: 150px;
-				color: #ffffff;
-				background-color: #1010a0;
-				margin: 0px;
-				padding: 0px;
-			}
 
 			a {
 				color: #ff0
@@ -29,7 +18,6 @@
 		</style>
 	</head>
 	<body>
-		<div id="thumb"></div>
 		<div id="container"></div>
 
 		<script src="../threejs/build/three.min.js"></script>
@@ -234,13 +222,10 @@
 				video.setAttribute( 'webkit-playsinline', 'webkit-playsinline' );
 				video.play();
 
-				// Place a thumbnail.
-				var thumb = document.getElementById( 'thumb' );
-				video.width = 300;
-				video.height = 150;
-				thumb.appendChild(video);
-
 				texture = new THREE.VideoTexture(video);
+				//texture.generateMipmaps = false;
+				//texture.minFilter = THREE.NearestFilter;	//THREE.LinearFilter;
+				//texture.maxFilter = THREE.NearestFilter;	//THREE.LinearFilter;
 				texture.minFilter = THREE.LinearFilter;
 				texture.maxFilter = THREE.LinearFilter;
 				texture.format = THREE.RGBFormat;
