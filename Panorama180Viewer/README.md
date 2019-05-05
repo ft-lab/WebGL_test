@@ -52,11 +52,10 @@ projectionmode＝１でEquirectangularのSide By Side、projectionmode＝2でFis
 
 ![show_webvr180_sbs_video](../images/Panorama180Viewer_img_01.jpg)    
 
-WebVR前の画面にて、左上に動画のサムネイルを表示してます。    
-PC版のFirefoxでは、このwebmでのサムネイルのアスペクト比が正しくないようです。     
-Oculus GoのFirefox Realityの場合は、左上のサムネイルが表示されないようです。    
-また、Oculus GoのOculus Browser(標準ブラウザ)、Firefox Realityだと再生が重い感じです。    
-後で調査予定。     
+~~WebVR前の画面にて、左上に動画のサムネイルを表示してます。~~     
+サムネイルを表示すると、Oculus Goで速度低下したので外しました。    
+
+Oculus GoのOculus Browser(標準ブラウザ)、Firefox Realityでの調査は後述。    
 
 以下は、実行デモです。    
 
@@ -71,8 +70,17 @@ projectionmode＝１でequirectangularのSide By Side、projectionmode＝2でFis
 
 ## Oculus Goでの検証用
 
-Oculus Goのブラウザでは、動画の再生が重い。    
-いくつかチェック用。
+いくつかチェック用。    
+
+### [-crf 40]
+
+ffmpegで変換する際に「-crf 40」を指定したもの。    
+
+https://ft-lab.jp/WebGL/WebGLTest/Panorama180Viewer/show_webvr180_sbs_video.html
+
+
+Oculus Browserでは安定動作。    
+Firefox Realityでは2ループ目あたりで途中で止まったりする。    
 
 ### [ 投影変換のShaderをEquirectangular180にする ]
 
@@ -80,8 +88,8 @@ Oculus Goのブラウザでは、動画の再生が重い。
 
 https://ft-lab.jp/WebGL/WebGLTest/Panorama180Viewer/show_webvr180_sbs_video.html?projectionmode=1
 
-Oculus Browserでは、動画が5fpsくらいになってるのは変わらず。    
-Firefox Realityではスムーズに安定した。    
+Oculus Browserでは安定動作。    
+Firefox Realityでもスムーズに安定した。    
 
 ### [ Equirectangular180 + 品質下げる（-crf 50） ]
 
@@ -89,17 +97,11 @@ ffmpegで変換する際に「-crf 50」を指定し品質を下げたwebmを用
 
 https://ft-lab.jp/WebGL/WebGLTest/Panorama180Viewer/show_webvr180_sbs_video.html?projectionmode=1&image=videos/ueno_park_crf50.webm
 
-Oculus Browserでは、動画が5fpsくらいになってるのは変わらず。    
-Firefox Realityではprojectionmode=1の指定をはずすと安定しないので、Shaderが負荷高いのかもしれない。    
-
 ### [ Equirectangular180 + 品質下げる（-crf 60） ]
 
 ffmpegで変換する際に「-crf 60」を指定し品質を下げたwebmを用意。    
 
 https://ft-lab.jp/WebGL/WebGLTest/Panorama180Viewer/show_webvr180_sbs_video.html?projectionmode=1&image=videos/ueno_park_crf60.webm
-
-Oculus Browserでは、動画が5fpsくらいになってるのは変わらず。    
-Firefox Realityではprojectionmode=1の指定をはずすと安定しないので、Shaderが負荷高いのかもしれない。    
 
 ### [ 解像度を下げる ]
 
@@ -110,13 +112,9 @@ Firefox Realityではprojectionmode=1の指定をはずすと安定しないの�
 
 https://ft-lab.jp/WebGL/WebGLTest/Panorama180Viewer/show_webvr180_sbs_video.html?image=videos/ueno_park_crf40_half.webm
 
-以下、「-crf 50」の指定。    
-「-vf "scale=1920:1080"」を指定して、解像度を半分にした。    
+Oculus Browserでは安定動作。    
+Firefox Realityでもスムーズに安定した。    
 
-https://ft-lab.jp/WebGL/WebGLTest/Panorama180Viewer/show_webvr180_sbs_video.html?image=videos/ueno_park_crf50_half.webm
-
-
-Oculus Browserでは、動画が5fpsくらいになってるのは変わらず。    
-Firefox RealityではFish Eyeの計算があっても安定。単純に解像度が1/4になったからかもしれない。    
+   
 
 ----
