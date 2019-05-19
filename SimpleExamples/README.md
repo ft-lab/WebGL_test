@@ -22,6 +22,7 @@ three.jsのファイルは、このGitHubのリポジトリには内包してい
 
 パノラマ360-3Dの静止画をWebVRで見る。    
 ![show_panorama360](../images/simpleExamples_show_panorama360.jpg)     
+パノラマ画像は、Unity上のOctaneでレンダリング。    
 
 以下は、実行デモです。    
 [https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/show_panorama360.html](https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/show_panorama360.html)    
