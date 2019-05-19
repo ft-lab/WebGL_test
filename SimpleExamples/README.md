@@ -17,11 +17,14 @@ three.jsのファイルは、このGitHubのリポジトリには内包してい
     <script src="../threejs/loaders/GLTFLoader.js"></script>		
 
 ## 内容
-
-### [show_panorama360.html](./show_panorama360.html)
+----
+### [show_panorama360.html](./show_panorama360.html)    
 
 パノラマ360-3Dの静止画をWebVRで見る。    
+![show_panorama360](../images/simpleExamples_show_panorama360.jpg)     
 
-実行 : 
-[https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/show_panorama360.html](https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/show_panorama360.html)
+以下は、実行デモです。    
+[https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/show_panorama360.html](https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/show_panorama360.html)    
+
+----
 
