@@ -17,6 +17,10 @@ three.jsのファイルは、このGitHubのリポジトリには内包してい
 
 ## 内容
 
-|項目名|内容|
-|---|---|
-|[show_panorama360.html](./show_panorama360.html)|パノラマ360-3Dの静止画をWebVRで見る|
+### [show_panorama360.html](./show_panorama360.html)
+
+パノラマ360-3Dの静止画をWebVRで見る。    
+
+実行 : 
+[https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/show_panorama360.html](https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/show_panorama360.html)
+
