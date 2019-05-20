@@ -47,3 +47,21 @@ THREE.OrbitControlsを使用してのマウスドラッグでのカメラ操作�
 [https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/show_gltf.html](https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/show_gltf.html)    
 
 ----
+
+### [show_gltf_vr.html](./show_gltf_vr.html)    
+
+上記の「show_gltf.html」をWebVR対応にしたものです。    
+
+glTFの読み込み。    
+exrファイルをEquirectangularで読み込んで、CubeMapに変換してEnvMapとして割り当て。    
+背景のjpegファイルをEquirectangularで読み込んで、背景球に割り当て。    
+地面に影のみを落とす。    
+THREE.OrbitControlsを使用してのマウスドラッグでのカメラ操作（視点固定、回転のみ）。    
+ログの表示。    
+テクスチャや形状の読み込みは、非同期で行っています。     
+VR実行時にカメラを固定(3DoF)。    
+![show_gltf_vr](../images/simpleExamples_show_gltf_vr.jpg)     
+パノラマ画像は、Unity上のOctaneでレンダリング。    
+
+以下は、実行デモです。    
+[https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/show_gltf_vr.html](https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/show_gltf_vr.html)    
