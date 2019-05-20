@@ -1,0 +1,368 @@
+<!--
+	Sample to display glTF.
+-->
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Show glTF</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #f0f0f0;
+				margin: 0px;
+				overflow: hidden;
+			}
+			#info {
+				position: absolute;
+				top: 16px;
+				left: 16px;
+				width: 100%;
+				color: #ffffff;
+				text-align: left;
+			}
+			a {
+				color: #ff0
+			}
+		</style>
+	</head>
+	<body>
+		<div id="container"></div>
+		<div id="info"></div>
+
+		<script src="../threejs/build/three.min.js"></script>
+		<script src="../threejs/loaders/GLTFLoader.js"></script> 	
+		<script src="../threejs/controls/OrbitControls.js"></script>
+		<script src="../threejs/loaders/EXRLoader.js"></script>
+		<script src="../threejs/loaders/EquirectangularToCubeGenerator.js"></script>
+		<script src="../threejs/pmrem/PMREMGenerator.js"></script>
+		<script src="../threejs/pmrem/PMREMCubeUVPacker.js"></script>
+
+		<!-- --------------------------------- -->
+		<!-- main 	 	 	 	 	 	 	  -->
+		<!-- --------------------------------- -->
+		<script>
+			var camera, scene, renderer, controls;
+
+			var m_backImageEXRURL = "images/octane_panorama360_room.exr";	// Background image file name.
+			var m_backCubeTarget = null;			// Background cube map texture.
+			var m_needsUpdateEnvMap = false;		// True if EnvMap needs updating.
+
+			var m_backTexture = null;				// background texture.
+			var m_backImageURL = "images/octane_panorama360_room_mono.jpg";    // Background texture (panorama360 ).
+
+			var m_glTFURL = "objects/apple.glb";	// glTF file name.
+			var m_glTFObject = null;				// glTF object.
+ 	 	 	var m_ground = null; 	 	 	  		// Ground receiving a shadow.
+
+			var m_messageTextList = null; 			// Message list.
+
+			var m_eyeHeight = 1.2;					// Height of camera.
+
+			init();
+			animate();
+
+			function init() {
+				var container = document.getElementById( 'container' );
+
+				//----------------------------------------------------.
+				// Camera.
+				//----------------------------------------------------.
+				camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.2, 2000 );
+
+				//----------------------------------------------------.
+				// Scene & Renderer.
+				//----------------------------------------------------.
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color(0x000030);
+
+				renderer = new THREE.WebGLRenderer({ antialias: true });
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container.appendChild( renderer.domElement );
+
+				// Enable shadow map.
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+				// Consider linear workflow.
+				renderer.gammaInput = true;
+				renderer.gammaOutput = true;
+				renderer.toneMapping = THREE.Uncharted2ToneMapping;
+				renderer.toneMappingExposure = 0.98;
+
+				//----------------------------------------------------.
+				// Background textures.
+				//----------------------------------------------------.
+				// Create background sphere.
+				setupBackgroundSphere(m_backImageURL);
+
+				// Load background exr texture.
+				loadBackgroundEXR(m_backImageEXRURL);
+
+				//----------------------------------------------------.
+				// Objects.
+				//----------------------------------------------------.
+				// Ground that receives only shadows.
+				addHiddenGroundReceiveShadow(10.0, 0.5);
+
+				// Load glTF object.
+				loadGLTF(m_glTFURL);
+
+				//----------------------------------------------------.
+				// Add a few lights.
+				//----------------------------------------------------.
+				var hemiLight = new THREE.HemisphereLight(0xcbcbff, 0x444422, 0.2);
+				hemiLight.position.set(0, 4, 0);
+				scene.add(hemiLight);
+
+				var directionalLight = new THREE.DirectionalLight(0xc0c0c0, 0.5);
+				directionalLight.position.set(50, 50, -30);
+				directionalLight.castShadow = true;
+				scene.add(directionalLight);
+
+				// Shadow map parameters.
+				directionalLight.shadow.mapSize.width = 1024;  // default 512
+				directionalLight.shadow.mapSize.height = 1024; // default 512
+				directionalLight.shadow.camera.near = 0.03; 	// default 0.5
+				directionalLight.shadow.camera.far = 100; 	   // default 500
+
+				//----------------------------------------------------.
+				// Mouse control & set camera position.
+				//----------------------------------------------------.
+				controls = new THREE.OrbitControls(camera, renderer.domElement );
+				controls.enablePan    = false;
+				controls.enableRotate = true;
+				controls.enableZoom   = false;
+
+				camera.position.set(0.0, m_eyeHeight, 0.0);
+				camera.rotation.set(0.0, 0.0, 0.0);
+				controls.target.set(0.01, m_eyeHeight, 0.0);
+				controls.update();
+
+				//----------------------------------------------------.
+				// Add events.
+				//----------------------------------------------------.
+				window.addEventListener( 'resize', onWindowResize, false );
+			}
+
+			function onWindowResize () {
+				var width  = window.innerWidth;
+				var height = window.innerHeight;
+
+				camera.aspect = width / height;
+				camera.updateProjectionMatrix();
+				renderer.setSize( width, height );
+			}
+
+			function animate() {
+				renderer.setAnimationLoop( render );
+			}
+
+			function render() {
+				// Update Env map.
+				updateObjectsEnvMap();
+
+				renderer.render( scene, camera );
+			}
+
+			/**
+			 * Create a ground to receive shadows.
+			 * @param[in] planeSize   Ground size.
+			 * @param[in] opacity 	  Opacity.
+			 */
+			function addHiddenGroundReceiveShadow (planeSize, opacity) {
+				if (m_ground != null) {
+					scene.remove(m_ground);
+					m_ground.geometry.dispose();
+					m_ground = null;
+				}
+
+				planeSize = (planeSize === undefined) ? 512 : planeSize;
+				opacity   = (opacity === undefined) ? 0.5 : opacity;
+
+				var planeMaterial = new THREE.ShadowMaterial();
+				planeMaterial.opacity = opacity;
+
+				m_ground = new THREE.Mesh(new THREE.PlaneGeometry(planeSize, planeSize), planeMaterial);
+				m_ground.receiveShadow = true;
+				m_ground.position.set(0, 0, 0);
+				m_ground.rotation.x = -Math.PI / 2;
+
+				scene.add(m_ground);
+			}
+
+			/**
+			 * Add a background sphere to the scene.
+			 */
+			function setupBackgroundSphere (imageURL) {
+				if (m_backTexture != null) {
+					m_backTexture.dispose();
+					m_backTexture = null;
+				}
+
+				m_backTexture = new THREE.Texture();
+				m_backTexture.generateMipmaps = true;
+				m_backTexture.minFilter = THREE.LinearFilter;
+				m_backTexture.maxFilter = THREE.LinearFilter;
+
+				var image = new Image();
+				image.onload = function () {
+					m_backTexture.image = this;
+					m_backTexture.needsUpdate = true;
+				};
+				image.src = imageURL;  
+
+				var material = new THREE.MeshBasicMaterial( { map: m_backTexture } );
+				var backRadius = 500.0;
+
+				var geom = new THREE.SphereBufferGeometry(backRadius, 40, 30);
+				geom.scale(-1, 1, 1);
+
+				var mesh = new THREE.Mesh(geom, material);
+				mesh.rotation.set(0, -180.0 * Math.PI / 180.0, 0);
+				mesh.material.needsUpdate = true;
+
+				scene.add(mesh);
+			}
+
+			/**
+			 * Load background texture.
+			 * Converted to cube map.
+			 */
+			function loadBackgroundEXR (url) {
+				appendMessage("loadBackgroundEXR [" + url + "]");
+
+				if (m_backCubeTarget != null) {
+					m_backCubeTarget.dispose();
+					m_backCubeTarget = null;
+				}
+
+				var loader = new THREE.EXRLoader();
+				loader.load(url, function ( texture ) {
+					texture.minFilter = THREE.LinearFilter;		//THREE.NearestFilter;
+					texture.maxFilter = THREE.LinearFilter;
+					texture.encoding  = THREE.LinearEncoding;
+
+					// Convert equirectangular to CubeMap.
+					var cubemapGenerator = new THREE.EquirectangularToCubeGenerator( texture, { resolution: 256, type: THREE.HalfFloatType } );
+
+					var exrBackground = cubemapGenerator.renderTarget;
+					var cubeMapTexture = cubemapGenerator.update( renderer );
+
+					var pmremGenerator = new THREE.PMREMGenerator( cubeMapTexture );
+					pmremGenerator.update( renderer );
+
+					var pmremCubeUVPacker = new THREE.PMREMCubeUVPacker( pmremGenerator.cubeLods );
+					pmremCubeUVPacker.update( renderer );
+
+					m_backCubeTarget = pmremCubeUVPacker.CubeUVRenderTarget;
+					m_backCubeTarget.needsUpdate = true;
+
+					texture.dispose();
+					cubeMapTexture.dispose();
+					pmremGenerator.dispose();
+					pmremCubeUVPacker.dispose();
+
+					m_needsUpdateEnvMap = true;
+
+					appendMessage("Success loadBackgroundEXR.");
+				});
+			}
+
+			/**
+			 * Load glTF file.
+			 */
+			function loadGLTF (url) {
+				appendMessage("loadGLTF [" + url + "]");
+
+				var loader = new THREE.GLTFLoader();
+				loader.load(url, function ( gltf ) {
+					m_glTFObject = gltf.scene;
+
+					m_glTFObject.traverse( function(node) {
+						if ( node.material && ( node.material.isMeshStandardMaterial ||
+							( node.material.isShaderMaterial && node.material.envMap !== undefined ) ) ) {
+
+							// test..
+							//node.material = new THREE.MeshPhysicalMaterial({color: 0xffffff, metalness: 1.0, roughness: 0.0});
+
+							node.material.needsUpdate = true;
+							node.receiveShadow = true;
+							node.castShadow    = true;
+							appendMessage("node [" + (node.name) + "]");
+
+							m_needsUpdateEnvMap = true;
+						}
+					} );
+
+					// Place shapes in the scene.
+					var scale = 3.0;
+					var cou = 20;
+					var angleP = 0.0;
+					var angleD = Math.PI * 2.0 / parseFloat(cou);
+					var dist = 1.5;
+
+					for (var i = 0; i < cou; ++i) {
+						var object = m_glTFObject.clone();
+						var px = Math.cos(angleP) * dist;
+						var pz = Math.sin(angleP) * dist;
+
+						object.position.x = px;
+						object.position.y = 0.0;
+						object.position.z = pz;
+
+						object.rotation.y = Math.random() * 2.0 * Math.PI;
+						object.scale.set(scale, scale, scale);
+						scene.add(object);
+						angleP += angleD;
+					}
+
+					appendMessage("success loadGLTF.");
+				} );
+			}
+
+			/**
+			 * Update objects envMap.
+			 */
+			function updateObjectsEnvMap () {
+				if (m_needsUpdateEnvMap && m_glTFObject != null && m_backCubeTarget != null) {
+					m_glTFObject.traverse( function(node) {
+						if ( node.material && ( node.material.isMeshStandardMaterial ||
+							( node.material.isShaderMaterial && node.material.envMap !== undefined ) ) ) {
+							node.material.envMap = m_backCubeTarget.texture;
+							node.material.needsUpdate = true;
+							appendMessage("Update [" + node.name + "] EnvMap.");
+						}
+					} );
+					m_needsUpdateEnvMap = false;
+				}
+			}
+
+			/**
+			* show debug message.
+			*/
+			function appendMessage (messageStr) {
+				if (m_messageTextList == null) {
+					m_messageTextList = [];
+				}
+				m_messageTextList.push(messageStr);
+				while (m_messageTextList.length > 10) {
+					m_messageTextList.shift();
+				}
+				var htmlStr = "";
+				for (var i = 0; i < m_messageTextList.length; ++i) {
+					htmlStr += m_messageTextList[i];
+					if (i + 1 < m_messageTextList.length) {
+						htmlStr += "<br>\n";
+					}
+				}
+
+				var infoC = document.getElementById('info');
+				infoC.innerHTML = htmlStr;
+			}
+		</script>
+
+	</body>
+</html>
