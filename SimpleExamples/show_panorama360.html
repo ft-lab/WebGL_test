@@ -1,148 +1,145 @@
 <!--
-  VR display of panoramic 360 still images of Top and bottom.
+	VR display of panoramic 360 still images of Top and bottom.
 -->
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <title>Show Panorama360</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <style>
-      body {
-        font-family: Monospace;
-        background-color: #f0f0f0;
-        margin: 0px;
-        overflow: hidden;
-      }
-      #info {
-        position: absolute;
-        top: 10px;
-        width: 100%;
-        color: #fff;
-        text-align: center;
-      }
-      a {
-        color: #ff0
-      }
-    </style>
-  </head>
-  <body>
-    <div id="container"></div>
-    <div id="info">
-    </div>
+	<head>
+		<title>Show Panorama360</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #f0f0f0;
+				margin: 0px;
+				overflow: hidden;
+			}
+			#info {
+				position: absolute;
+				top: 10px;
+				width: 100%;
+				color: #fff;
+				text-align: center;
+			}
+			a {
+				color: #ff0
+			}
+		</style>
+	</head>
+	<body>
+		<div id="container"></div>
+		<div id="info"></div>
 
-    <script src="../threejs/build/three.min.js"></script>
-    <script src="../threejs/vr/WebVR.js"></script>
+		<script src="../threejs/build/three.min.js"></script>
+		<script src="../threejs/vr/WebVR.js"></script>
 
-    <!-- --------------------------------- -->
-    <!-- main                              -->
-    <!-- --------------------------------- -->
-    <script>
-      var camera, scene, renderer;
-      var m_backTexture;        // background texture.
-      var m_imageURL = "images/octane_panorama360_room.jpg";    // Background texture (panorama360 ).
+		<!-- --------------------------------- -->
+		<!-- main                              -->
+		<!-- --------------------------------- -->
+		<script>
+			var camera, scene, renderer;
+			var m_backTexture;        // background texture.
+			var m_imageURL = "images/octane_panorama360_room.jpg";    // Background texture (panorama360 ).
 
-      init();
-      animate();
+			init();
+			animate();
 
-      function init () {
-        var container = document.getElementById( 'container' );
+			function init () {
+				var container = document.getElementById( 'container' );
 
-        // Setup camera.
-        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 2000);
-        camera.layers.enable(1);   // render left view when no stereo available
+				// Setup camera.
+				camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 2000);
+				camera.layers.enable(1);   // render left view when no stereo available
 
-        scene = new THREE.Scene();
+				scene = new THREE.Scene();
 
-        // Create background sphere.
-        setupBackgroundSphere(m_imageURL);
+				// Create background sphere.
+				setupBackgroundSphere(m_imageURL);
 
-        // setup Renderer.
-        renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setPixelRatio(window.devicePixelRatio);
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.vr.enabled = true;
-        container.appendChild(renderer.domElement);
+				// setup Renderer.
+				renderer = new THREE.WebGLRenderer({ antialias: true });
+				renderer.setPixelRatio(window.devicePixelRatio);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.vr.enabled = true;
+				container.appendChild(renderer.domElement);
 
-        document.body.appendChild( WEBVR.createButton( renderer, { frameOfReferenceType: 'head-model' } ) );
-        window.addEventListener( 'resize', onWindowResize, false );
-      }
+				document.body.appendChild( WEBVR.createButton( renderer, { frameOfReferenceType: 'head-model' } ) );
+				window.addEventListener( 'resize', onWindowResize, false );
+			}
 
-      /**
-       * Add a background sphere to the scene.
-       */
-      function setupBackgroundSphere (imageURL) {
-        m_backTexture = new THREE.Texture();
-        m_backTexture.generateMipmaps = true;
-        m_backTexture.minFilter = THREE.LinearFilter;
-        m_backTexture.maxFilter = THREE.LinearFilter;
+			/**
+			 * Add a background sphere to the scene.
+			 */
+			function setupBackgroundSphere (imageURL) {
+				m_backTexture = new THREE.Texture();
+				m_backTexture.generateMipmaps = true;
+				m_backTexture.minFilter = THREE.LinearFilter;
+				m_backTexture.maxFilter = THREE.LinearFilter;
 
-        var image = new Image();
-        image.onload = function () {
-          m_backTexture.image = this;
-          m_backTexture.needsUpdate = true;
-        };
-        image.src = imageURL;  
+				var image = new Image();
+				image.onload = function () {
+					m_backTexture.image = this;
+					m_backTexture.needsUpdate = true;
+				};
+				image.src = imageURL;  
 
-        var material = new THREE.MeshBasicMaterial( { map: m_backTexture } );
+				var material = new THREE.MeshBasicMaterial( { map: m_backTexture } );
 
-        var backRadius = 500.0;
+				var backRadius = 500.0;
 
-        // Left.
-        {
-          var geom = new THREE.SphereBufferGeometry(backRadius, 40, 30);
-          geom.scale(-1, 1, 1);
-          geom.rotateY(-Math.PI / 2);
+				// Left.
+				{
+					var geom = new THREE.SphereBufferGeometry(backRadius, 40, 30);
+					geom.scale(-1, 1, 1);
+					geom.rotateY(-Math.PI / 2);
 
-          // Remap UVs.
-          var uvs = geom.attributes.uv.array;
-          for (var i = 0, iPos = 0; i < uvs.length / 2; ++i, iPos += 2) {
-            uvs[iPos + 1] = (uvs[iPos + 1] * 0.5) + 0.5;
-          }
+					// Remap UVs.
+					var uvs = geom.attributes.uv.array;
+					for (var i = 0, iPos = 0; i < uvs.length / 2; ++i, iPos += 2) {
+						uvs[iPos + 1] = (uvs[iPos + 1] * 0.5) + 0.5;
+					}
 
-          var mesh = new THREE.Mesh(geom, material);
-          mesh.material.needsUpdate = true;
+					var mesh = new THREE.Mesh(geom, material);
+					mesh.material.needsUpdate = true;
 
-          mesh.layers.set( 1 );    // display in left eye only
-          scene.add( mesh );
-        }
+					mesh.layers.set( 1 );    // display in left eye only
+					scene.add( mesh );
+				}
 
-        // Right.
-        {
-          var geom = new THREE.SphereBufferGeometry(backRadius, 40, 30);
-          geom.scale(-1, 1, 1);
-          geom.rotateY(-Math.PI / 2);
+				// Right.
+				{
+					var geom = new THREE.SphereBufferGeometry(backRadius, 40, 30);
+					geom.scale(-1, 1, 1);
+					geom.rotateY(-Math.PI / 2);
 
-          // Remap UVs.
-          var uvs = geom.attributes.uv.array;
-          for (var i = 0, iPos = 0; i < uvs.length / 2; ++i, iPos += 2) {
-            uvs[iPos + 1] = (uvs[iPos + 1] * 0.5);
-          }
+					// Remap UVs.
+					var uvs = geom.attributes.uv.array;
+					for (var i = 0, iPos = 0; i < uvs.length / 2; ++i, iPos += 2) {
+						uvs[iPos + 1] = (uvs[iPos + 1] * 0.5);
+					}
 
-          var mesh = new THREE.Mesh(geom, material);
-          mesh.layers.set( 2 );    // display in right eye only
-          scene.add( mesh );
-        }
-      }
+					var mesh = new THREE.Mesh(geom, material);
+					mesh.layers.set( 2 );    // display in right eye only
+					scene.add( mesh );
+				}
+			}
 
-      function onWindowResize () {
-        var width  = window.innerWidth;
-        var height = window.innerHeight;
+			function onWindowResize () {
+				var width  = window.innerWidth;
+				var height = window.innerHeight;
 
-        camera.aspect = width / height;
-        camera.updateProjectionMatrix();
-        renderer.setSize( width, height );
-      }
+				camera.aspect = width / height;
+				camera.updateProjectionMatrix();
+				renderer.setSize( width, height );
+			}
 
-      function animate () {
-        renderer.setAnimationLoop( render );
-      }
+			function animate () {
+				renderer.setAnimationLoop( render );
+			}
 
-      function render () {
-        renderer.render( scene, camera );
-      }
-
-    </script>
-
-    </body>
+			function render () {
+				renderer.render( scene, camera );
+			}
+		</script>
+	</body>
 </html>

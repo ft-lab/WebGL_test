@@ -32,11 +32,12 @@ three.jsのファイルは、このGitHubのリポジトリには内包してい
 ### [show_gltf.html](./show_gltf.html)    
 
 これは、WebGLのサンプルになります(WebVRではありません)。    
+
 glTFの読み込み。    
 exrファイルをEquirectangularで読み込んで、CubeMapに変換してEnvMapとして割り当て。    
 背景のjpegファイルをEquirectangularで読み込んで、背景球に割り当て。    
 地面に影のみを落とす。    
-THREE.OrbitControlsを使用してのマウスドラッグでのカメラ操作。    
+THREE.OrbitControlsを使用してのマウスドラッグでのカメラ操作（視点固定、回転のみ）。    
 ログの表示。    
 テクスチャや形状の読み込みは、非同期で行っています。     
 ![show_gltf](../images/simpleExamples_show_gltf.jpg)     
