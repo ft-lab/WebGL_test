@@ -29,7 +29,7 @@ three.jsのファイルは、このGitHubのリポジトリには内包してい
 
 ----
 
-### [show_panorama360.html](./show_gltf.html)    
+### [show_gltf.html](./show_gltf.html)    
 
 これは、WebGLのサンプルになります(WebVRではありません)。    
 glTFの読み込み。    
