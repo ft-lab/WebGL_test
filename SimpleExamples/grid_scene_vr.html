@@ -1,0 +1,256 @@
+<!--
+	Scene to display the grid.
+-->
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Scene to display the grid</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #f0f0f0;
+				margin: 0px;
+				overflow: hidden;
+			}
+			#info {
+				position: absolute;
+				top: 16px;
+				left: 16px;
+				width: 100%;
+				color: #ffffff;
+				text-align: left;
+			}
+			a {
+				color: #ff0
+			}
+		</style>
+	</head>
+	<body>
+		<div id="container"></div>
+		<div id="info"></div>
+
+		<script src="../threejs/build/three.min.js"></script>
+		<script src="../threejs/vr/WebVR.js"></script>
+
+		<script src='../threejs/lines/LineSegmentsGeometry.js'></script>
+		<script src='../threejs/lines/LineGeometry.js'></script>
+		<script src='../threejs/lines/WireframeGeometry2.js'></script>
+
+		<script src='../threejs/lines/LineMaterial.js'></script>
+
+		<script src='../threejs/lines/LineSegments2.js'></script>
+		<script src='../threejs/lines/Line2.js'></script>
+		<script src='../threejs/lines/Wireframe.js'></script>
+
+		<!-- --------------------------------- -->
+		<!-- main                              -->
+		<!-- --------------------------------- -->
+		<script>
+			var camera, scene, renderer;
+
+			var m_sceneRoot;
+			var m_eyeHeight = 1.5;		// Height of camera.
+
+			init();
+			animate();
+
+			function init () {
+				var container = document.getElementById( 'container' );
+
+				//----------------------------------------------------.
+				// Camera.
+				//----------------------------------------------------.
+				camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.2, 1000);
+				camera.layers.enable(1);   // render left view when no stereo available
+				camera.position.set(0, m_eyeHeight, 0);
+
+				//----------------------------------------------------.
+				// Scene & Renderer.
+				//----------------------------------------------------.
+				scene = new THREE.Scene();
+				m_sceneRoot = new THREE.Object3D();
+				scene.add(m_sceneRoot);
+
+				// setup Renderer.
+				renderer = new THREE.WebGLRenderer({ antialias: true });
+				renderer.setPixelRatio(window.devicePixelRatio);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.vr.enabled = true;
+				container.appendChild(renderer.domElement);
+
+				// Enable shadow map.
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+				// Consider linear workflow.
+				renderer.gammaInput = true;
+				renderer.gammaOutput = true;
+				renderer.toneMapping = THREE.Uncharted2ToneMapping;
+				renderer.toneMappingExposure = 0.98;
+
+				//----------------------------------------------------.
+				// Objects.
+				//----------------------------------------------------.
+				// Create grid.
+				createGrid(40.0);
+
+				// Create sphere.
+				{
+					var material = new THREE.MeshStandardMaterial( { color: 0xff0000 } );
+					var geom = new THREE.SphereBufferGeometry(0.5, 40, 30);
+					var mesh = new THREE.Mesh(geom, material);
+					mesh.position.set(0, 0.5, -8.0);
+					m_sceneRoot.add( mesh );
+				}
+
+				//----------------------------------------------------.
+				// Add a few lights.
+				//----------------------------------------------------.
+				var hemiLight = new THREE.HemisphereLight(0xcbcbff, 0x444422, 0.2);
+				hemiLight.position.set(0, 4, 0);
+				m_sceneRoot.add(hemiLight);
+
+				var directionalLight = new THREE.DirectionalLight(0xc0c0c0, 0.5);
+				directionalLight.position.set(50, 50, -30);
+				directionalLight.castShadow = true;
+				m_sceneRoot.add(directionalLight);
+
+				// Shadow map parameters.
+				directionalLight.shadow.mapSize.width = 1024;  // default 512
+				directionalLight.shadow.mapSize.height = 1024; // default 512
+				directionalLight.shadow.camera.near = 0.03; 	// default 0.5
+				directionalLight.shadow.camera.far = 100; 	   // default 500
+
+				//----------------------------------------------------.
+				// Add events.
+				//----------------------------------------------------.
+				document.body.appendChild( WEBVR.createButton( renderer, { frameOfReferenceType: 'head-model' } ) );
+				window.addEventListener( 'resize', onWindowResize, false );
+			}
+
+			/**
+			 * Create grid.
+			 */
+			function createGrid (spaceSize) {
+				var sizeH = spaceSize * 0.5;
+				var cou = parseInt(spaceSize);
+
+				var lineMat = new THREE.LineBasicMaterial( {
+					color: 0xc0c0c0,
+					linewidth: 1.0
+				});
+
+				// 1m interval grid.
+				{
+					var geometry = new THREE.Geometry();
+					var p = -sizeH;
+					for (var i = 0; i < cou / 2; ++i) {
+						geometry.vertices.push(new THREE.Vector3(-sizeH, 0, p) );
+						geometry.vertices.push(new THREE.Vector3( sizeH, 0, p) );
+						geometry.vertices.push(new THREE.Vector3( sizeH, 0, p + 1.0) );
+						geometry.vertices.push(new THREE.Vector3(-sizeH, 0, p + 1.0) );
+						if (i + 2 < cou) {
+							geometry.vertices.push(new THREE.Vector3(-sizeH, 0, p + 2.0) );
+						}
+						p += 2.0;
+					}
+					var line = new THREE.Line( geometry, lineMat );
+					m_sceneRoot.add( line );
+				}
+				{
+					var geometry = new THREE.Geometry();
+					var p = -sizeH;
+					for (var i = 0; i < cou / 2; ++i) {
+						geometry.vertices.push(new THREE.Vector3(p      , 0, -sizeH) );
+						geometry.vertices.push(new THREE.Vector3(p      , 0,  sizeH) );
+						geometry.vertices.push(new THREE.Vector3(p + 1.0, 0,  sizeH) );
+						geometry.vertices.push(new THREE.Vector3(p + 1.0, 0, -sizeH) );
+						if (i + 2 < cou) {
+							geometry.vertices.push(new THREE.Vector3(p + 2.0, 0, -sizeH) );
+						}
+						p += 2.0;
+					}
+					var line = new THREE.Line( geometry, lineMat );
+					m_sceneRoot.add( line );
+				}
+				{
+					var lineOuterMat = new THREE.LineMaterial( {
+						color: 0xffa0a0,
+						linewidth: 0.002,		// Unit is meter.
+						dashed: false
+					});
+
+					var positions = [];
+					var geometry = new THREE.LineGeometry();
+					positions.push(-sizeH, 0, -sizeH);
+					positions.push( sizeH, 0, -sizeH);
+					positions.push( sizeH, 0,  sizeH);
+					positions.push(-sizeH, 0,  sizeH);
+					positions.push(-sizeH, 0, -sizeH);
+					geometry.setPositions( positions );
+					var line = new THREE.Line2( geometry, lineOuterMat );
+					line.computeLineDistances();
+					line.scale.set( 1, 1, 1 );
+					m_sceneRoot.add( line );
+				}
+
+				// Axis.
+				{
+					var lineAxisMat = new THREE.LineMaterial( {
+						color: 0xff0000,
+						linewidth: 0.005,		// Unit is meter.
+						dashed: false
+					});
+					var positions = [];
+					var geometry = new THREE.LineGeometry();
+					positions.push(-sizeH, 0, 0);
+					positions.push( sizeH, 0, 0);
+					geometry.setPositions( positions );
+					var line = new THREE.Line2( geometry, lineAxisMat );
+					line.computeLineDistances();
+					line.scale.set( 1, 1, 1 );
+					m_sceneRoot.add( line );
+				}
+				{
+					var lineAxisMat = new THREE.LineMaterial( {
+						color: 0x0000ff,
+						linewidth: 0.005,		// Unit is meter.
+						dashed: false
+					});
+					var positions = [];
+					var geometry = new THREE.LineGeometry();
+					positions.push(0, 0, -sizeH);
+					positions.push(0, 0,  sizeH);
+					geometry.setPositions( positions );
+					var line = new THREE.Line2( geometry, lineAxisMat );
+					line.computeLineDistances();
+					line.scale.set( 1, 1, 1 );
+					m_sceneRoot.add( line );
+				}
+
+			}
+
+			function onWindowResize () {
+				var width  = window.innerWidth;
+				var height = window.innerHeight;
+
+				camera.aspect = width / height;
+				camera.updateProjectionMatrix();
+				renderer.setSize( width, height );
+			}
+
+			function animate () {
+				renderer.setAnimationLoop( render );
+			}
+
+			function render () {
+				var cameraPos = camera.position;		// VR-HMD position.
+				m_sceneRoot.position.set(0.0, -m_eyeHeight, 0.0);
+
+				renderer.render( scene, camera );
+			}
+		</script>
+	</body>
+</html>
