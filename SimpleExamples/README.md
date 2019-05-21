@@ -77,3 +77,15 @@ WebVRの移動(6DoF)確認用。
 [https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/grid_scene_vr.html](https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/grid_scene_vr.html)    
 
 ----
+
+### [draw_text.html](./draw_text.html)    
+
+これは、WebGLのサンプルになります(WebVRではありません)。    
+
+Canvasへの描画を使用し、テキストをテクスチャにして描画します。    
+![draw_text](../images/simpleExamples_draw_text.jpg)     
+
+以下は、実行デモです。    
+[https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/draw_text.html](https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/draw_text.html)    
+
+----
