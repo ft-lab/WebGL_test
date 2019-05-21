@@ -70,7 +70,7 @@ VR実行時にカメラを固定(3DoF)。
 ### [grid_scene_vr.html](./grid_scene_vr.html)    
 
 WebVRの移動(6DoF)確認用。    
-地面にグリッドを描画。    
+地面にグリッドを描画（グリッドは1m間隔）。    
 ![grid_scene_vr](../images/simpleExamples_grid_scene_vr.jpg)     
 
 以下は、実行デモです。    
