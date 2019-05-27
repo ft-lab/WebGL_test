@@ -1,0 +1,229 @@
+<!--
+	RenderTarget test.
+-->
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>RenderTarget test</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #f0f0f0;
+				margin: 0px;
+				overflow: hidden;
+			}
+			#info {
+				position: absolute;
+				top: 16px;
+				left: 16px;
+				width: 100%;
+				color: #ffffff;
+				text-align: left;
+			}
+			a {
+				color: #ff0
+			}
+
+			#textureCanvas {
+				position: absolute;
+				top: 16px;
+				left: 16px;
+				width: 100%;
+				color: #ffffff;
+				text-align: left;
+				display: none;
+			}
+
+		</style>
+	</head>
+	<body>
+		<div id="container"></div>
+		<div id="info"></div>
+		<canvas id="textureCanvas"></canvas>
+
+		<script src="../threejs/build/three.min.js"></script>
+
+		<!-- --------------------------------- -->
+		<!-- main 	 	 	 	 	 	 	  -->
+		<!-- --------------------------------- -->
+		<script>
+			var camera, scene, renderer;
+
+			var m_cube = null;
+			var m_rotX = 0.0;
+			var m_rotY = 0.0;
+
+			// RenderTarget.
+			var m_bufferScene = null;
+			var m_bufferCamera = null;
+			var m_bufferTexture = null;
+			var m_innerPlane = null;
+			var m_innerPlaneRotZ = 0.0;
+
+			var m_messageTextList = null; 			// Message list.
+
+			init();
+			animate();
+
+			function init() {
+				var container = document.getElementById( 'container' );
+
+				//----------------------------------------------------.
+				// Create RenderTarget.
+				//----------------------------------------------------.
+				createRenderTarget(512, 512);
+
+				//----------------------------------------------------.
+				// Camera.
+				//----------------------------------------------------.
+				camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.2, 2000 );
+				camera.position.set(0, 0, 0);
+				camera.lookAt(0, 0, -1);
+
+				//----------------------------------------------------.
+				// Scene & Renderer.
+				//----------------------------------------------------.
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color(0x000030);
+
+				renderer = new THREE.WebGLRenderer({ antialias: true });
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container.appendChild( renderer.domElement );
+
+				// Consider linear workflow.
+				renderer.gammaInput = true;
+				renderer.gammaOutput = true;
+				renderer.toneMapping = THREE.Uncharted2ToneMapping;
+				renderer.toneMappingExposure = 0.98;
+
+				//----------------------------------------------------.
+				// Add lights.
+				//----------------------------------------------------.
+				var hemiLight = new THREE.HemisphereLight(0xcbcbff, 0x444422, 0.2);
+				hemiLight.position.set(0, 4, 0);
+				scene.add(hemiLight);
+
+				var directionalLight = new THREE.DirectionalLight(0xc0c0c0, 1.0);
+				directionalLight.position.set(50, 50, -30);
+				directionalLight.castShadow = true;
+				scene.add(directionalLight);
+
+				//----------------------------------------------------.
+				// Add objects.
+				//----------------------------------------------------.
+				// Create cube.
+				var geometry = new THREE.BoxBufferGeometry( 10, 10, 10 );
+				var material = new THREE.MeshStandardMaterial( { map: m_bufferTexture.texture } );
+
+				m_cube = new THREE.Mesh( geometry, material );
+				scene.add(m_cube);
+				m_cube.position.set(0, 0, -20.0);
+
+				//----------------------------------------------------.
+				// Add events.
+				//----------------------------------------------------.
+				window.addEventListener( 'resize', onWindowResize, false );
+			}
+
+			/**
+			 * create renderTarget.
+			 */
+			function createRenderTarget (width, height) {
+				var widthH  = width  * 0.5;
+				var heightH = height * 0.5;
+
+				m_bufferScene = new THREE.Scene();
+				m_bufferScene.background = new THREE.Color(0xa0a0ff);
+				
+				m_bufferCamera = new THREE.OrthographicCamera(-widthH, widthH, heightH, -heightH, 0.1, 100);
+				m_bufferCamera.lookAt(0, 0, -1);
+				m_bufferCamera.position.z = 20.0;
+
+				var material = new THREE.MeshBasicMaterial( { color: 0xff0000 } );
+
+				var geom = new THREE.PlaneBufferGeometry(width * 0.7, height * 0.7);
+				m_innerPlane = new THREE.Mesh(geom, material);
+				m_innerPlane.position.set(0, 0, 0);
+				m_bufferScene.add(m_innerPlane);
+
+				m_bufferTexture = new THREE.WebGLRenderTarget(width, height, { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter, type: THREE.FloatType });
+				m_bufferTexture.texture.generateMipmaps = false;
+
+				m_bufferCamera.aspect = width / height;
+				m_bufferCamera.updateProjectionMatrix();
+
+				appendMessage("Create renderTarget.");
+			}
+
+			function onWindowResize () {
+				var width  = window.innerWidth;
+				var height = window.innerHeight;
+
+				camera.aspect = width / height;
+				camera.updateProjectionMatrix();
+				renderer.setSize( width, height );
+			}
+
+			function animate () {
+				renderer.setAnimationLoop( render );
+			}
+
+			function render () {
+				// Cube rotation.
+				if (m_cube != null) {
+					m_rotX += 0.1;
+					if (m_rotX > 360.0) m_rotX -= 360.0;
+
+					m_rotY += 0.5;
+					if (m_rotY > 360.0) m_rotY -= 360.0;
+					m_cube.rotation.x = m_rotX * Math.PI / 180.0;
+					m_cube.rotation.y = m_rotY * Math.PI / 180.0;
+				}
+
+				// Inner plane rotation.
+				if (m_innerPlane != null) {
+					m_innerPlaneRotZ += 0.1;
+					if (m_innerPlaneRotZ > 360.0) m_innerPlaneRotZ -= 360.0;
+					m_innerPlane.rotation.z = m_innerPlaneRotZ * Math.PI / 180.0;
+				}
+
+				// Render RenderTarget.
+				renderer.clear();
+				renderer.setRenderTarget(m_bufferTexture);
+				renderer.setSize(512, 512);
+				renderer.render(m_bufferScene, m_bufferCamera);
+
+				// Render Screen.
+				renderer.setRenderTarget(null);
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.render( scene, camera );
+			}
+
+			/**
+			 * show debug message.
+			 */
+			 function appendMessage (messageStr) {
+				if (m_messageTextList == null) {
+					m_messageTextList = [];
+				}
+				m_messageTextList.push(messageStr);
+				while (m_messageTextList.length > 10) {
+					m_messageTextList.shift();
+				}
+				var htmlStr = "";
+				for (var i = 0; i < m_messageTextList.length; ++i) {
+					htmlStr += m_messageTextList[i];
+					if (i + 1 < m_messageTextList.length) {
+						htmlStr += "<br>\n";
+					}
+				}
+
+				var infoC = document.getElementById('info');
+				infoC.innerHTML = htmlStr;
+			}
+		</script>
+	</body>
+</html>
