@@ -89,3 +89,16 @@ Canvasへの描画を使用し、テキストをテクスチャにして描画�
 [https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/draw_text.html](https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/draw_text.html)    
 
 ----
+
+### [render_target.html](./render_target.html)    
+
+これは、WebGLのサンプルになります(WebVRではありません)。    
+
+THREE.WebGLRenderTargetを使用し、いったんテクスチャ(RenderTarget)にシーンを描画した後、
+メインシーンのテクスチャとして使用します。    
+![draw_text](../images/simpleExamples_render_target.jpg)     
+
+以下は、実行デモです。    
+[https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/render_target.html](https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/render_target.html)    
+
+----
