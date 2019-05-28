@@ -1,0 +1,368 @@
+<!--
+	Pre-render and update textures in advance.
+-->
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Pre-render and update textures in advance</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #f0f0f0;
+				margin: 0px;
+				overflow: hidden;
+			}
+			#info {
+				position: absolute;
+				top: 16px;
+				left: 16px;
+				width: 100%;
+				color: #ffffff;
+				text-align: left;
+			}
+			a {
+				color: #ff0
+			}
+
+			#textureCanvas {
+				position: absolute;
+				top: 16px;
+				left: 16px;
+				width: 100%;
+				color: #ffffff;
+				text-align: left;
+				display: none;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="container"></div>
+		<div id="info"></div>
+		<canvas id="textureCanvas"></canvas>
+
+		<script src="../threejs/build/three.min.js"></script>
+
+		<!-- --------------------------------- -->
+		<!-- PreRender test shader.            -->
+		<!-- --------------------------------- -->
+		<script id="vs-prerender" type="x-shader/x-vertex">
+			varying vec2 vUv;
+
+			void main()	{
+				vUv = uv;
+				gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+			}
+		</script>
+
+		<script id="fs-prerender" type="x-shader/x-fragment">
+			varying vec2 vUv;
+
+			uniform sampler2D _MainTex;       	// Texture.
+			uniform vec4 _BlendColor;			// Blend Color.
+
+			void main()	{
+				vec2 uv = vUv;
+				vec3 col = texture2D(_MainTex, uv).rgb;
+				col.rgb = col.rgb * _BlendColor.rgb;
+				gl_FragColor = vec4(col.r, col.g, col.b, 1.0);
+			}
+		</script>
+
+		<!-- --------------------------------- -->
+		<!-- main 	 	 	 	 	 	 	  -->
+		<!-- --------------------------------- -->
+		<script>
+			var camera, scene, renderer;
+
+			var m_rotX = 0.0;
+			var m_rotY = 0.0;
+
+			var m_texturesList = null;				// Textures list.
+			var m_shaderMaterial = null;			// Shader material.
+
+			var m_bufferScene = null;
+			var m_bufferCamera = null;
+
+			var m_bufferRenderTargetList = null;	// RenderTarget List.
+			var m_cubeList = null;
+
+			var m_messageTextList = null; 			// Message list.
+			var m_preRenderState = 0;
+
+			init();
+			animate();
+
+			function init() {
+				var container = document.getElementById( 'container' );
+
+				//----------------------------------------------------.
+				// Camera.
+				//----------------------------------------------------.
+				camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.2, 2000 );
+				camera.position.set(0, 0, 0);
+				camera.lookAt(0, 0, -1);
+
+				//----------------------------------------------------.
+				// Scene & Renderer.
+				//----------------------------------------------------.
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color(0x000030);
+
+				renderer = new THREE.WebGLRenderer({ antialias: true });
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				container.appendChild( renderer.domElement );
+
+				// Consider linear workflow.
+				renderer.gammaInput = true;
+				renderer.gammaOutput = true;
+				renderer.toneMapping = THREE.Uncharted2ToneMapping;
+				renderer.toneMappingExposure = 0.98;
+
+				//----------------------------------------------------.
+				// Create material.
+				//----------------------------------------------------.
+				createMaterial();
+
+				//----------------------------------------------------.
+				// Add lights.
+				//----------------------------------------------------.
+				var hemiLight = new THREE.HemisphereLight(0xcbcbff, 0x444422, 0.2);
+				hemiLight.position.set(0, 4, 0);
+				scene.add(hemiLight);
+
+				var directionalLight = new THREE.DirectionalLight(0xc0c0c0, 1.0);
+				directionalLight.position.set(50, 50, -30);
+				directionalLight.castShadow = true;
+				scene.add(directionalLight);
+
+				//----------------------------------------------------.
+				// Load textures.
+				//----------------------------------------------------.
+				m_texturesList = [null, null, null];
+				loadTextures();
+
+				//----------------------------------------------------.
+				// Add objects.
+				//----------------------------------------------------.
+				// Create cube.
+				var geometry = new THREE.BoxBufferGeometry( 10, 10, 10 );
+
+				m_cubeList = [];
+				var xPos = -20.0;
+				for (var i = 0; i < 3; ++i) {
+					var material = new THREE.MeshStandardMaterial();
+					material.needsUpdate = true;
+					var mesh = new THREE.Mesh( geometry, material );
+					m_cubeList.push(mesh);
+					mesh.position.set(xPos, 0, -30.0);
+					scene.add(mesh);
+					xPos += 20.0;
+				}
+
+
+				//----------------------------------------------------.
+				// Add events.
+				//----------------------------------------------------.
+				window.addEventListener( 'resize', onWindowResize, false );
+			}
+
+			/**
+			 * Create shader material.
+			 */
+			function createMaterial () {
+				m_shaderMaterial = new THREE.ShaderMaterial( {
+					uniforms: {
+						"_MainTex": {value: null},
+						"_BlendColor": {value: new THREE.Vector4(1, 1, 1, 1)},
+					},
+					vertexShader: document.getElementById( 'vs-prerender' ).textContent,
+					fragmentShader: document.getElementById( 'fs-prerender' ).textContent
+				} );
+				if (m_shaderMaterial != null) {
+					appendMessage("Create shader material.");
+				}
+			}
+
+			/**
+			 * Load textures.
+			 */
+			function loadTextures (index) {
+				if (index === undefined) {
+					loadTextures(0);
+					return;
+				}
+
+				var textureLoader = new THREE.TextureLoader();
+				var url = "./images/tex_" + (index + 1).toString() + ".png";
+				textureLoader.load(url, function (texture) {
+					texture.needsUpdate = true;
+					m_texturesList[index] = texture;
+					m_cubeList[index].material.map = m_texturesList[index];
+					m_cubeList[index].material.needsUpdate = true;
+
+					if (index < 2) {
+						loadTextures(index + 1);
+					} else {
+						appendMessage("Success load textures.");
+
+						// Create Pre-render textures.
+						createPreRenderTextures();
+					}
+				});
+			}
+
+			/**
+			 * Create Pre-render textures.
+			 */
+			function createPreRenderTextures () {
+				m_preRenderState = 1;
+
+				var width  = 512;
+				var height = 512;
+				var widthH  = width  * 0.5;
+				var heightH = height * 0.5;
+
+				m_bufferScene = new THREE.Scene();
+				m_bufferScene.background = new THREE.Color(0xff0000);
+				
+				m_bufferCamera = new THREE.OrthographicCamera(-widthH, widthH, heightH, -heightH, 0.1, 100);
+				m_bufferCamera.lookAt(0, 0, -1);
+				m_bufferCamera.position.z = 10.0;
+				m_bufferCamera.aspect = width / height;
+				m_bufferCamera.updateProjectionMatrix();
+
+				var geom = new THREE.PlaneBufferGeometry(width, height);
+				var innerPlane = new THREE.Mesh(geom, m_shaderMaterial);
+				innerPlane.position.set(0, 0, 0);
+				m_bufferScene.add(innerPlane);
+
+				// Create RenderTargets.
+				m_bufferRenderTargetList = [];
+				for (var i = 0; i < m_texturesList.length; ++i) {
+					var rTarget = new THREE.WebGLRenderTarget(width, height);
+					rTarget.texture.generateMipmaps = false;
+					m_bufferRenderTargetList.push(rTarget);
+				}
+
+				m_preRenderState = 2;
+			}
+
+			/**
+			 * Pre-render textures using Shader.
+			 */
+			function preRenderTextures () {
+				if (m_preRenderState != 2) return;
+
+				var width  = 512;
+				var height = 512;
+
+				// Render textures.
+				var vrEnabled = renderer.vr.enabled;
+				renderer.vr.enabled = false;	// This is required for post effects to texture.
+				renderer.autoClear = false;
+				renderer.clear();
+				renderer.setSize(width, height);
+
+				var col = new THREE.Vector4(1, 0.0, 0.0, 1);
+				for (var i = 0; i < m_texturesList.length; ++i) {
+					var srcTexture = m_texturesList[i];
+					if (srcTexture == null) continue;
+					if (i == 0) {
+						col = new THREE.Vector4(1, 0.0, 0.0, 1);
+					} else if (i == 1) {
+						col = new THREE.Vector4(0.0, 1.0, 0.0, 1);
+					} else {
+						col = new THREE.Vector4(0.0, 0.0, 1.0, 1);
+					}
+
+					var rTarget = m_bufferRenderTargetList[i];
+
+					m_shaderMaterial.uniforms['_MainTex'].value = srcTexture;
+					m_shaderMaterial.uniforms['_BlendColor'].value = col;
+
+					// Rendering.
+					renderer.setRenderTarget(rTarget);
+					renderer.render(m_bufferScene, m_bufferCamera);
+
+					// Update texture.
+					//renderer.copyFramebufferToTexture(new THREE.Vector2(0, 0), m_texturesList[i]);
+
+					m_cubeList[i].material.map = rTarget.texture;
+				}
+
+				//m_bufferScene.dispose();
+
+				// Restore WebGLRenderer.
+				renderer.setRenderTarget(null);
+				renderer.vr.enabled = vrEnabled;
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+				appendMessage("Update textures (Use RenderTarget).");
+
+				m_preRenderState = 3;
+			}
+
+			function onWindowResize () {
+				var width  = window.innerWidth;
+				var height = window.innerHeight;
+
+				camera.aspect = width / height;
+				camera.updateProjectionMatrix();
+				renderer.setSize( width, height );
+			}
+
+			function animate () {
+				renderer.setAnimationLoop( render );
+			}
+
+			function render () {
+				// Cube rotation.
+				if (m_cubeList != null) {
+					m_rotX += 0.1;
+					if (m_rotX > 360.0) m_rotX -= 360.0;
+
+					m_rotY += 0.5;
+					if (m_rotY > 360.0) m_rotY -= 360.0;
+					for (var i = 0; i < m_cubeList.length; ++i) {
+						m_cubeList[i].rotation.x = m_rotX * Math.PI / 180.0;
+						m_cubeList[i].rotation.y = m_rotY * Math.PI / 180.0;
+					}
+				}
+
+				// PreRender.
+				preRenderTextures();
+
+				// Render Screen.
+				//renderer.setRenderTarget(null);
+				//renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.render( scene, camera );
+			}
+
+			/**
+			 * show debug message.
+			 */
+			 function appendMessage (messageStr) {
+				if (m_messageTextList == null) {
+					m_messageTextList = [];
+				}
+				m_messageTextList.push(messageStr);
+				while (m_messageTextList.length > 10) {
+					m_messageTextList.shift();
+				}
+				var htmlStr = "";
+				for (var i = 0; i < m_messageTextList.length; ++i) {
+					htmlStr += m_messageTextList[i];
+					if (i + 1 < m_messageTextList.length) {
+						htmlStr += "<br>\n";
+					}
+				}
+
+				var infoC = document.getElementById('info');
+				infoC.innerHTML = htmlStr;
+			}
+		</script>
+	</body>
+</html>
