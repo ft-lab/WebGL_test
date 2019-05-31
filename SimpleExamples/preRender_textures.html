@@ -66,6 +66,7 @@
 				vec2 uv = vUv;
 				vec3 col = texture2D(_MainTex, uv).rgb;
 				col.rgb = col.rgb * _BlendColor.rgb;
+
 				gl_FragColor = vec4(col.r, col.g, col.b, 1.0);
 			}
 		</script>
@@ -85,11 +86,9 @@
 			var m_bufferScene = null;
 			var m_bufferCamera = null;
 
-			var m_bufferRenderTargetList = null;	// RenderTarget List.
 			var m_cubeList = null;
 
 			var m_messageTextList = null; 			// Message list.
-			var m_preRenderState = 0;
 
 			init();
 			animate();
@@ -200,6 +199,12 @@
 				textureLoader.load(url, function (texture) {
 					texture.needsUpdate = true;
 					m_texturesList[index] = texture;
+
+					// Note : THREE.WebGLRenderer.CopyFramebufferToTexture fails if minFilter is not NearestFilter.
+					m_texturesList[index].minFilter = THREE.NearestFilter;
+					m_texturesList[index].magFilter = THREE.NearestFilter;
+					m_texturesList[index].generateMipmaps = false;
+
 					m_cubeList[index].material.map = m_texturesList[index];
 					m_cubeList[index].material.needsUpdate = true;
 
@@ -209,7 +214,11 @@
 						appendMessage("Success load textures.");
 
 						// Create Pre-render textures.
-						createPreRenderTextures();
+						var texSize = 512;
+						createPreRenderTextures(texSize);
+
+						// Pre-render textures.
+						preRenderTextures(texSize);
 					}
 				});
 			}
@@ -217,11 +226,9 @@
 			/**
 			 * Create Pre-render textures.
 			 */
-			function createPreRenderTextures () {
-				m_preRenderState = 1;
-
-				var width  = 512;
-				var height = 512;
+			function createPreRenderTextures (texSize) {
+				var width  = texSize;
+				var height = texSize;
 				var widthH  = width  * 0.5;
 				var heightH = height * 0.5;
 
@@ -238,33 +245,24 @@
 				var innerPlane = new THREE.Mesh(geom, m_shaderMaterial);
 				innerPlane.position.set(0, 0, 0);
 				m_bufferScene.add(innerPlane);
-
-				// Create RenderTargets.
-				m_bufferRenderTargetList = [];
-				for (var i = 0; i < m_texturesList.length; ++i) {
-					var rTarget = new THREE.WebGLRenderTarget(width, height);
-					rTarget.texture.generateMipmaps = false;
-					m_bufferRenderTargetList.push(rTarget);
-				}
-
-				m_preRenderState = 2;
 			}
 
 			/**
 			 * Pre-render textures using Shader.
 			 */
-			function preRenderTextures () {
-				if (m_preRenderState != 2) return;
-
-				var width  = 512;
-				var height = 512;
+			function preRenderTextures (texSize) {
+				var width  = texSize;
+				var height = texSize;
 
 				// Render textures.
 				var vrEnabled = renderer.vr.enabled;
 				renderer.vr.enabled = false;	// This is required for post effects to texture.
 				renderer.autoClear = false;
-				renderer.clear();
 				renderer.setSize(width, height);
+
+				// Create a texture to draw offScreen.
+				var rTarget = new THREE.WebGLRenderTarget(width, height);
+				rTarget.texture.generateMipmaps = false;
 
 				var col = new THREE.Vector4(1, 0.0, 0.0, 1);
 				for (var i = 0; i < m_texturesList.length; ++i) {
@@ -278,22 +276,19 @@
 						col = new THREE.Vector4(0.0, 0.0, 1.0, 1);
 					}
 
-					var rTarget = m_bufferRenderTargetList[i];
-
 					m_shaderMaterial.uniforms['_MainTex'].value = srcTexture;
 					m_shaderMaterial.uniforms['_BlendColor'].value = col;
 
 					// Rendering.
 					renderer.setRenderTarget(rTarget);
+					renderer.clear();
 					renderer.render(m_bufferScene, m_bufferCamera);
 
 					// Update texture.
-					//renderer.copyFramebufferToTexture(new THREE.Vector2(0, 0), m_texturesList[i]);
-
-					m_cubeList[i].material.map = rTarget.texture;
+					renderer.copyFramebufferToTexture(new THREE.Vector2(0, 0), m_texturesList[i]);
 				}
 
-				//m_bufferScene.dispose();
+				rTarget.dispose();
 
 				// Restore WebGLRenderer.
 				renderer.setRenderTarget(null);
@@ -301,8 +296,6 @@
 				renderer.setSize( window.innerWidth, window.innerHeight );
 
 				appendMessage("Update textures (Use RenderTarget).");
-
-				m_preRenderState = 3;
 			}
 
 			function onWindowResize () {
@@ -332,12 +325,7 @@
 					}
 				}
 
-				// PreRender.
-				preRenderTextures();
-
 				// Render Screen.
-				//renderer.setRenderTarget(null);
-				//renderer.setSize( window.innerWidth, window.innerHeight );
 				renderer.render( scene, camera );
 			}
 

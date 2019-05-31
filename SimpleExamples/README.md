@@ -1,6 +1,7 @@
 ## SimpleExamples
 
 WebGL/WebVRの簡単なサンプルです。    
+PC上のfirefox上、Oculus QuestのBrowser上で動作確認済みのものになります。    
 
 ## 開発環境
 
@@ -94,11 +95,24 @@ Canvasへの描画を使用し、テキストをテクスチャにして描画�
 
 これは、WebGLのサンプルになります(WebVRではありません)。    
 
-THREE.WebGLRenderTargetを使用し、いったんテクスチャ(RenderTarget)にシーンを描画した後、
+THREE.WebGLRenderTargetを使用し、いったんテクスチャ(RenderTarget)にシーンを描画した後、    
 メインシーンのテクスチャとして使用します。    
-![draw_text](../images/simpleExamples_render_target.jpg)     
+![simpleExamples_render_target](../images/simpleExamples_render_target.jpg)     
 
 以下は、実行デモです。    
 [https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/render_target.html](https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/render_target.html)    
+
+----
+
+### [preRender_textures.html](./preRender_textures.html)    
+
+これは、WebGLのサンプルになります(WebVRではありません)。    
+
+THREE.WebGLRenderTargetを使用し、いったん作業用テクスチャ(RenderTarget)にShaderを使用した描画を行った後、    
+読み込んだテクスチャをTHREE.WebGLRenderer.copyFramebufferToTextureを使って置き換えます。    
+![simpleExamples_preRender_textures](../images/simpleExamples_preRender_textures.jpg)     
+
+以下は、実行デモです。    
+[https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/preRender_textures.html](https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/preRender_textures.html)    
 
 ----
