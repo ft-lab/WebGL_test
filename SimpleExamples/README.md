@@ -116,3 +116,15 @@ THREE.WebGLRenderTargetを使用し、いったん作業用テクスチャ(Rende
 [https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/preRender_textures.html](https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/preRender_textures.html)    
 
 ----
+
+### [vr_controller.html](./vr_controller.html)    
+
+navigator.getGamepadsを使用し、Oculus Questのハンドコントローラのボタン情報を取得します。    
+3DモデルはShade3Dで作成( [OculusQuest_HandController.shd](./objects/OculusQuest_HandController.shd) )し、glTF( [OculusQuest_HandController.glb](./objects/OculusQuest_HandController.glb) )で出力したものです。    
+
+![simpleExamples_vr_controller](../images/simpleExamples_vr_controller.jpg)     
+
+以下は、実行デモです。    
+[https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/vr_controller.html](https://ft-lab.jp/WebGL/WebGLTest/SimpleExamples/vr_controller.html)    
+
+----

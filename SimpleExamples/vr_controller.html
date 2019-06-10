@@ -1,0 +1,411 @@
+<!--
+	Display VR controller information.
+-->
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Display VR controller information</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #f0f0f0;
+				margin: 0px;
+				overflow: hidden;
+			}
+			#info {
+				position: absolute;
+				top: 16px;
+				left: 16px;
+				width: 100%;
+				color: #ffffff;
+				text-align: left;
+			}
+			#textureCanvas1 {
+				position: absolute;
+				top: 16px;
+				left: 16px;
+				width: 100%;
+				color: #ffffff;
+				text-align: left;
+				display: none;
+			}
+			#textureCanvas2 {
+				position: absolute;
+				top: 16px;
+				left: 16px;
+				width: 100%;
+				color: #ffffff;
+				text-align: left;
+				display: none;
+			}
+
+		</style>
+	</head>
+	<body>
+		<div id="container"></div>
+		<div id="info"></div>
+		<canvas id="textureCanvas1"></canvas>
+		<canvas id="textureCanvas2"></canvas>
+
+		<script src="../threejs/build/three.min.js"></script>
+		<script src="../threejs/loaders/GLTFLoader.js"></script>
+		<script src="../threejs/vr/WebVR.js"></script>
+
+		<script src='../threejs/lines/LineSegmentsGeometry.js'></script>
+		<script src='../threejs/lines/LineGeometry.js'></script>
+		<script src='../threejs/lines/WireframeGeometry2.js'></script>
+
+		<script src='../threejs/lines/LineMaterial.js'></script>
+
+		<script src='../threejs/lines/LineSegments2.js'></script>
+		<script src='../threejs/lines/Line2.js'></script>
+		<script src='../threejs/lines/Wireframe.js'></script>
+
+		<script src="./js/OculusQuestHandController.js"></script>
+
+		<!-- --------------------------------- -->
+		<!-- main                              -->
+		<!-- --------------------------------- -->
+		<script>
+			var camera, scene, renderer;
+
+			var m_sceneRoot;
+			var m_eyeHeight = 1.5;			// Height of camera.
+
+			var m_messagePlane1 = null;
+			var m_canvasTexture1 = null;     // Texture to display the message.
+			var m_messagePlane2 = null;
+			var m_canvasTexture2 = null;     // Texture to display the message.
+
+			var m_handController = null		// Oculus Quest Hand controller.
+
+			var m_messageTextList = null; 			// Message list.
+
+			init();
+			animate();
+
+			function init () {
+				var container = document.getElementById( 'container' );
+
+				//----------------------------------------------------.
+				// Camera.
+				//----------------------------------------------------.
+				camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.01, 1000);
+				camera.layers.enable(1);   // render left view when no stereo available
+				camera.position.set(0, m_eyeHeight, 0);
+
+				//----------------------------------------------------.
+				// Scene & Renderer.
+				//----------------------------------------------------.
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color(0x000030);
+				m_sceneRoot = new THREE.Object3D();
+				scene.add(m_sceneRoot);
+
+				// setup Renderer.
+				renderer = new THREE.WebGLRenderer({ antialias: true });
+				renderer.setPixelRatio(window.devicePixelRatio);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				renderer.vr.enabled = true;
+				container.appendChild(renderer.domElement);
+
+				// Enable shadow map.
+				renderer.shadowMap.enabled = true;
+				renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+				// Consider linear workflow.
+				renderer.gammaInput = true;
+				renderer.gammaOutput = true;
+				renderer.toneMapping = THREE.Uncharted2ToneMapping;
+				renderer.toneMappingExposure = 1.0;
+
+				//----------------------------------------------------.
+				// Objects.
+				//----------------------------------------------------.
+				// Convert Canvas to Texture.
+				updateTextTexture(0, '');
+				updateTextTexture(1, '');
+
+				// Create grid.
+				createGrid(40.0);
+
+				// Create planes.
+				var planeWidth  = 0.25;
+				var planeHeight = planeWidth * 0.8;
+				var shiftX = 0.22;
+				var shiftY = 0.01;
+				{
+					var material = new THREE.MeshBasicMaterial({map : m_canvasTexture1, side: THREE.DoubleSide});
+					material.needsUpdate = true;
+					var geom = new THREE.PlaneBufferGeometry(planeWidth, planeHeight);
+					m_messagePlane1 = new THREE.Mesh(geom, material);
+					m_messagePlane1.position.set(-shiftX, shiftY, 0.0);
+					m_messagePlane1.rotation.set(-90.0 * Math.PI / 180.0, 0.0, 0.0);
+				}
+				{
+					var material = new THREE.MeshBasicMaterial({map : m_canvasTexture2, side: THREE.DoubleSide});
+					material.needsUpdate = true;
+					var geom = new THREE.PlaneBufferGeometry(planeWidth, planeHeight);
+					m_messagePlane2 = new THREE.Mesh(geom, material);
+					m_messagePlane2.position.set(shiftX, shiftY, 0.0);
+					m_messagePlane2.rotation.set(-90.0 * Math.PI / 180.0, 0.0, 0.0);
+				}
+
+				//----------------------------------------------------.
+				// Light.
+				//----------------------------------------------------.
+				var ambLight = new THREE.AmbientLight(0xffffff, 0.2);
+				m_sceneRoot.add(ambLight);
+
+				var directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
+				directionalLight.position.set(50, 50, -30);
+				m_sceneRoot.add(directionalLight);
+
+				//----------------------------------------------------.
+				// VR Hand Controller.
+				//----------------------------------------------------.
+				m_handController = new OculusQuestHandController.HandController(scene, renderer);
+				m_handController.init();
+
+				//----------------------------------------------------.
+				// Add events.
+				//----------------------------------------------------.
+				document.body.appendChild( WEBVR.createButton( renderer, { frameOfReferenceType: 'head-model' } ) );
+				window.addEventListener( 'resize', onWindowResize, false );
+			}
+
+			/**
+			 * Create grid.
+			 */
+			function createGrid (spaceSize) {
+				var sizeH = spaceSize * 0.5;
+				var cou = parseInt(spaceSize);
+
+				var lineMat = new THREE.LineBasicMaterial( {
+					color: 0xc0c0c0,
+					linewidth: 1.0
+				});
+
+				// 1m interval grid.
+				{
+					var geometry = new THREE.Geometry();
+					var p = -sizeH;
+					for (var i = 0; i < cou / 2; ++i) {
+						geometry.vertices.push(new THREE.Vector3(-sizeH, 0, p) );
+						geometry.vertices.push(new THREE.Vector3( sizeH, 0, p) );
+						geometry.vertices.push(new THREE.Vector3( sizeH, 0, p + 1.0) );
+						geometry.vertices.push(new THREE.Vector3(-sizeH, 0, p + 1.0) );
+						if (i + 2 < cou) {
+							geometry.vertices.push(new THREE.Vector3(-sizeH, 0, p + 2.0) );
+						}
+						p += 2.0;
+					}
+					var line = new THREE.Line( geometry, lineMat );
+					m_sceneRoot.add( line );
+				}
+				{
+					var geometry = new THREE.Geometry();
+					var p = -sizeH;
+					for (var i = 0; i < cou / 2; ++i) {
+						geometry.vertices.push(new THREE.Vector3(p      , 0, -sizeH) );
+						geometry.vertices.push(new THREE.Vector3(p      , 0,  sizeH) );
+						geometry.vertices.push(new THREE.Vector3(p + 1.0, 0,  sizeH) );
+						geometry.vertices.push(new THREE.Vector3(p + 1.0, 0, -sizeH) );
+						if (i + 2 < cou) {
+							geometry.vertices.push(new THREE.Vector3(p + 2.0, 0, -sizeH) );
+						}
+						p += 2.0;
+					}
+					var line = new THREE.Line( geometry, lineMat );
+					m_sceneRoot.add( line );
+				}
+				{
+					var lineOuterMat = new THREE.LineMaterial( {
+						color: 0xffa0a0,
+						linewidth: 0.002,		// Unit is meter.
+						dashed: false
+					});
+
+					var positions = [];
+					var geometry = new THREE.LineGeometry();
+					positions.push(-sizeH, 0, -sizeH);
+					positions.push( sizeH, 0, -sizeH);
+					positions.push( sizeH, 0,  sizeH);
+					positions.push(-sizeH, 0,  sizeH);
+					positions.push(-sizeH, 0, -sizeH);
+					geometry.setPositions( positions );
+					var line = new THREE.Line2( geometry, lineOuterMat );
+					line.computeLineDistances();
+					line.scale.set( 1, 1, 1 );
+					m_sceneRoot.add( line );
+				}
+
+				// Axis.
+				{
+					var lineAxisMat = new THREE.LineMaterial( {
+						color: 0xff0000,
+						linewidth: 0.005,		// Unit is meter.
+						dashed: false
+					});
+					var positions = [];
+					var geometry = new THREE.LineGeometry();
+					positions.push(-sizeH, 0, 0);
+					positions.push( sizeH, 0, 0);
+					geometry.setPositions( positions );
+					var line = new THREE.Line2( geometry, lineAxisMat );
+					line.computeLineDistances();
+					line.scale.set( 1, 1, 1 );
+					m_sceneRoot.add( line );
+				}
+				{
+					var lineAxisMat = new THREE.LineMaterial( {
+						color: 0x0000ff,
+						linewidth: 0.005,		// Unit is meter.
+						dashed: false
+					});
+					var positions = [];
+					var geometry = new THREE.LineGeometry();
+					positions.push(0, 0, -sizeH);
+					positions.push(0, 0,  sizeH);
+					geometry.setPositions( positions );
+					var line = new THREE.Line2( geometry, lineAxisMat );
+					line.computeLineDistances();
+					line.scale.set( 1, 1, 1 );
+					m_sceneRoot.add( line );
+				}
+			}
+
+			/**
+			 * Convert Canvas to Texture.
+			 * @param[in] index       controller id.
+			 * @param[in] messageStr  String to display.
+			 */
+             function updateTextTexture (index, messageStr) {
+				var canvas = document.getElementById('textureCanvas' + (index+1).toString());
+				canvas.width  = 1024;
+				canvas.height = 1024;
+
+				// Draw text on Canvas.
+				var ctx = canvas.getContext('2d');
+				{
+					// Fill the background.
+					ctx.fillStyle = "#002000";
+					ctx.fillRect(0, 0, canvas.width, canvas.height);
+				}
+				if (messageStr != null && messageStr != '') {
+					// Draw text.
+					var fHeight = 30;
+					ctx.font = fHeight.toString() + 'px monospace';
+					ctx.fillStyle = "#ffffff";
+
+                    var strA = messageStr.split('\n');
+					var px = 8;
+					var py = fHeight + 4;
+					for (var i = 0; i < strA.length; ++i) {
+						str = strA[i];
+						ctx.fillText(str, px, py);
+						py += fHeight + 4;
+					}
+				}
+
+				// Create texture.
+				if (index == 0) {
+					if (m_canvasTexture1 == null) {
+						m_canvasTexture1 = new THREE.Texture(canvas);
+					}
+					m_canvasTexture1.image = canvas;
+					m_canvasTexture1.needsUpdate = true;
+
+				} else {
+					if (m_canvasTexture2 == null) {
+						m_canvasTexture2 = new THREE.Texture(canvas);
+					}
+					m_canvasTexture2.image = canvas;
+					m_canvasTexture2.needsUpdate = true;
+				}
+			}
+
+			/**
+			 * Update hand controller.
+			 */
+			function updateHandController () {
+				if (m_handController == null) return;
+
+				// Update hand controller data.
+				if (!m_handController.update()) return;
+
+				// Add Plane to Controller Object.
+				if (m_handController.getLeftController().children.length <= 1) {
+					m_handController.addToLeftController(m_messagePlane1);
+				}
+				if (m_handController.getRightController().children.length <= 1) {
+					m_handController.addToRightController(m_messagePlane2);
+				}
+			}
+
+			/**
+			 * Get controller parameters.
+			 */
+			function getControllerParameters () {
+				if (m_handController == null) return;
+				var controller1 = m_handController.getLeftController();
+				var controller2 = m_handController.getRightController();
+				if (controller1 == null || controller2 == null) return;
+
+				var mStr1 = '\n' + m_handController.dumpData(true);		// Left.
+				var mStr2 = '\n' + m_handController.dumpData(false);	// Right.
+
+				updateTextTexture(0, mStr1);
+				updateTextTexture(1, mStr2);
+			}
+
+			function onWindowResize () {
+				var width  = window.innerWidth;
+				var height = window.innerHeight;
+
+				camera.aspect = width / height;
+				camera.updateProjectionMatrix();
+				renderer.setSize( width, height );
+			}
+
+			function animate () {
+				renderer.setAnimationLoop( render );
+			}
+
+			function render () {
+				var cameraPos = camera.position;		// VR-HMD position.
+				m_sceneRoot.position.set(0.0, -m_eyeHeight, 0.0);
+
+				updateHandController();
+				getControllerParameters();
+
+				renderer.render( scene, camera );
+			}
+
+			/**
+			 * show debug message.
+			 */
+			function appendMessage (messageStr) {
+				if (m_messageTextList == null) {
+					m_messageTextList = [];
+				}
+				m_messageTextList.push(messageStr);
+				while (m_messageTextList.length > 10) {
+					m_messageTextList.shift();
+				}
+				var htmlStr = "";
+				for (var i = 0; i < m_messageTextList.length; ++i) {
+					htmlStr += m_messageTextList[i];
+					if (i + 1 < m_messageTextList.length) {
+						htmlStr += "<br>\n";
+					}
+				}
+
+				var infoC = document.getElementById('info');
+				infoC.innerHTML = htmlStr;
+			}
+		</script>
+	</body>
+</html>
