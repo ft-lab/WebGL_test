@@ -8,6 +8,18 @@
 var OculusQuestHandController = {};
 OculusQuestHandController.name = "Oculus Quest hand controller";
 
+/**
+ * Buttons ID.
+ */
+OculusQuestHandController.ButtonMapping = {
+	thumbStick : 0,			// With joystick.
+	trigger    : 1,
+	grip       : 2,
+	button1    : 3,
+	button2    : 4,
+	menuButton : 5 			// Can't get the menu button?
+};
+
 OculusQuestHandController.HandController = function (_scene, _renderer) {
 	var scope = this;
 
@@ -26,18 +38,6 @@ OculusQuestHandController.HandController = function (_scene, _renderer) {
 	this.rightControllerMesh = null;	// Right controller mesh.
 
 	var m_glTFURL = "objects/OculusQuest_HandController.glb";	// glTF file name.
-
-	/**
-	 * Buttons ID.
-	 */
-	var ButtonMapping = {
-		thumbStick : 0,			// With joystick.
-		trigger    : 1,
-		grip       : 2,
-		button1    : 3,
-		button2    : 4,
-		menuButton : 5 			// Can't get the menu button?
-	}
 
 	/**
 	 * Load glTF Object.
